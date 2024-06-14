@@ -14,7 +14,7 @@ Development is still in its early stages! Documentation of the library will be u
 
 ## Changelog
 
-### [0.0.1] Initial prototype - 2024.06.14
+### [0.1.0] Initial prototype - 2024.06.14
 
 #### Summary
 
