@@ -86,11 +86,11 @@ class MiphaPredictor(ABC):
         print("Extracting features from data sources...")
         features = [extractor.extract_features(data_source)
                     for data_source, extractor in zip(data_sources, self.feature_extractors)]
-        print("Feature extraction complete!")
+        print("Feature extraction complete!\n")
 
         print("Aggregating features from data sources...")
         aggregation = self.aggregator.aggregate_features(features)
-        print("Aggregation complete!")
+        print("Aggregation complete!\n")
 
         return aggregation
 
@@ -100,7 +100,7 @@ class MiphaPredictor(ABC):
         x_train = self.process_data(data_sources)
 
         output = self.model.fit(x_train, train_labels, *args, **kwargs)
-        print("Model fit successfully!")
+        print("Model fit successfully!\n")
 
         return output
 
