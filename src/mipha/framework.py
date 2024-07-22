@@ -4,6 +4,16 @@ import tempfile
 import zipfile
 from abc import ABC, abstractmethod
 import _pickle as pickle
+from dataclasses import dataclass
+from typing import Self, Any
+
+import numpy as np
+
+
+@dataclass
+class DataSource:
+    dataType: str
+    data: Any
 
 
 class MiphaComponent(ABC):
@@ -43,6 +53,14 @@ class FeatureExtractor(MiphaComponent):
     Feature Extractor base class. The purpose of a Feature Extractor is to output features from a data source.
     """
 
+    def __init__(self, managed_data_sources: list[str] = None):
+        """
+        :param managed_data_sources: A list of data source type names to extract features from.
+        Whenever feature extraction needs to be performed for a DataSource with attribute dataType
+        equal to managed_data_sources, the MiphaPredictor: will feed it to this FeatureExtractor.
+        """
+        self.managed_data_sources = managed_data_sources
+
     @abstractmethod
     def extract_features(self, x):
         """
@@ -50,6 +68,68 @@ class FeatureExtractor(MiphaComponent):
         :return: Extracted features. Must be able to cast to a numpy array.
         """
         return NotImplemented
+
+
+class DataContract:
+    def __init__(self, mappings: dict[str, FeatureExtractor | list[FeatureExtractor]] = None):
+        """
+        Initializes the DataContract with optional initial mappings.
+
+        :param mappings: Optional dictionary where keys are string names of data source types and values are
+                                 single or multiple FeatureExtractor instances.
+        """
+        self.contract: dict[str, list[FeatureExtractor]] = {}
+        if mappings:
+            self.add_data_sources(mappings)
+
+    def add_data_sources(self, mappings: dict[str, FeatureExtractor | list[FeatureExtractor]]) -> Self:
+        """
+        Adds mappings of data source type names to FeatureExtractor instances to the contract.
+
+        :param mappings: A dictionary where keys are string names of data sources and values are
+                         single or multiple FeatureExtractor instances.
+        """
+        if not isinstance(mappings, dict):
+            raise ValueError("Mappings must be a dictionary")
+        for data_source_type, extractors in mappings.items():
+            if not isinstance(extractors, list):
+                extractors = [extractors]
+            if data_source_type in self.contract:
+                print(f"Warning: Extractors for {data_source_type} are already in the contract and will be replaced.")
+            self.contract[data_source_type] = extractors
+
+        return self
+
+    def get_extractors(self, data_source_type: str) -> list[FeatureExtractor]:
+        """
+        Retrieves the list of FeatureExtractor instances for a given data source type name.
+
+        :param data_source_type: A string name of a data source type.
+        :return: A list of FeatureExtractor instances associated with the data_source_type.
+        :raises KeyError: If the data_source_type is not present in the contract.
+        """
+        if data_source_type not in self.contract:
+            raise KeyError(f"{data_source_type} is not in the contract")
+        return self.contract[data_source_type]
+
+    @staticmethod
+    def from_feature_extractors(extractors: list[FeatureExtractor]) -> 'DataContract':
+        """
+        Creates a DataContract from a list of FeatureExtractor instances by mapping each extractor to its managed data sources.
+
+        :param extractors: A list of FeatureExtractor instances.
+        :return: An instance of DataContract initialized with the mappings from the feature extractors.
+        """
+        mappings = {}
+        for extractor in extractors:
+            managed_data_sources = extractor.managed_data_sources
+            if managed_data_sources:
+                for data_source_type in managed_data_sources:
+                    if data_source_type not in mappings:
+                        mappings[data_source_type] = []
+                    mappings[data_source_type].append(extractor)
+
+        return DataContract(mappings=mappings)
 
 
 class Aggregator(MiphaComponent):
@@ -114,21 +194,32 @@ class MiphaPredictor:
         self.aggregator = aggregator
         self.model = model
         self.evaluator = evaluator
+        self.data_contract = DataContract.from_feature_extractors(self.feature_extractors)
 
-    def process_data(self, data_sources: list):
+    def process_data(self, data_sources: list[DataSource]):
         """Utility function to process the data sources by extracting and aggregating features."""
         print("Extracting features from data sources...")
-        features = [extractor.extract_features(data_source)
-                    for data_source, extractor in zip(data_sources, self.feature_extractors)]
+
+        extracted_features = []
+
+        if not isinstance(data_sources, list):
+            data_sources = [data_sources]
+
+        for data_source in data_sources:
+            extractors = self.data_contract.get_extractors(data_source.dataType)
+            for extractor in extractors:
+                features = extractor.extract_features(data_source.data)
+                extracted_features.append(features)
+
         print("Feature extraction complete!\n")
 
         print("Aggregating features from data sources...")
-        aggregation = self.aggregator.aggregate_features(features)
+        aggregation = self.aggregator.aggregate_features(extracted_features)
         print("Aggregation complete!\n")
 
         return aggregation
 
-    def fit(self, data_sources: list, train_labels, *args, **kwargs):
+    def fit(self, data_sources: list[DataSource], train_labels, *args, **kwargs):
         """Fit the MIPHA model to the given data sources ("x_train") using the provided training labels ("y_train")."""
         print("Fitting the model...")
         x_train = self.process_data(data_sources)
@@ -138,12 +229,12 @@ class MiphaPredictor:
 
         return output
 
-    def predict(self, data_sources: list, *args, **kwargs):
+    def predict(self, data_sources: list[DataSource], *args, **kwargs):
         """Use the MIPHA model to predict a label for the given data sources ("x_test")."""
         x_test = self.process_data(data_sources)
         return self.model.predict(x_test, *args, **kwargs)
 
-    def evaluate(self, data_sources, test_labels, *args, **kwargs):
+    def evaluate(self, data_sources: list[DataSource], test_labels, *args, **kwargs):
         """Evaluate the MIPHA model on the given data sources ("x_test"),
         using the provided test labels ("y_test") as reference."""
         x_test = self.process_data(data_sources)

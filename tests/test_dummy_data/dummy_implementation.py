@@ -3,7 +3,8 @@ import numpy as np
 
 
 class DummyFeatureExtractor(FeatureExtractor):
-    def __init__(self, name):
+    def __init__(self, name, managed_data_sources=None):
+        super().__init__(managed_data_sources)
         self.name = name
         self.called = 0
 

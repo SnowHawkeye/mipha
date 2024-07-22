@@ -4,6 +4,8 @@ from collections import namedtuple
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
+from mipha.framework import DataSource
+
 DIAGNOSIS_CODE = "icd_code"
 ADMISSION_ID = "hadm_id"
 PATIENT_ID = "subject_id"
@@ -101,11 +103,25 @@ def load_stage_5_ckd(random_state=None):
         = load_data("stage_5_ckd", random_state)
 
     # Create data sources
-    data_source_1_train = [pd.DataFrame(t["analysis_50912"]) for t in bio_data_train]  # creatinine measurements
-    data_source_2_train = pd.DataFrame([get_demographics(t, patients) for t in meta_train])
+    data_source_1_train = DataSource(
+        dataType="Creatinine",
+        data=[pd.DataFrame(t["analysis_50912"]) for t in bio_data_train],
+    )
 
-    data_source_1_test = [pd.DataFrame(t["analysis_50912"]) for t in bio_data_test]  # creatinine measurements
-    data_source_2_test = pd.DataFrame([get_demographics(t, patients) for t in meta_test])
+    data_source_2_train = DataSource(
+        dataType="Demographics",
+        data=pd.DataFrame([get_demographics(t, patients) for t in meta_train]),
+    )
+
+    data_source_1_test = DataSource(
+        dataType="Creatinine",
+        data=[pd.DataFrame(t["analysis_50912"]) for t in bio_data_test],
+    )
+
+    data_source_2_test = DataSource(
+        dataType="Demographics",
+        data=pd.DataFrame([get_demographics(t, patients) for t in meta_test]),
+    )
 
     LearningData = namedtuple(
         typename="LearningData",

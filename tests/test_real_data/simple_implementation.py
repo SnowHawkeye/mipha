@@ -105,6 +105,9 @@ def evaluate_model(model: MachineLearningModel, x_test, y_test, threshold, *args
 # FRAMEWORK IMPLEMENTATION
 
 class BiologyFeatureExtractor(FeatureExtractor):
+    def __init__(self, managed_data_sources: list[str] = None):
+        super().__init__(managed_data_sources)
+
     def extract_features(self, x):
         config = tsfel.get_features_by_domain()
         simple_imputer = make_simple_imputer()
@@ -115,6 +118,9 @@ class BiologyFeatureExtractor(FeatureExtractor):
 
 
 class DemographicsFeatureExtractor(FeatureExtractor):
+    def __init__(self, managed_data_sources: list[str] = None):
+        super().__init__(managed_data_sources)
+
     def extract_features(self, x):
         one_hot_encoder = OneHotEncoder(drop="if_binary")
         one_hot_encoder.fit(x.loc[:, ["gender"]])  # keep the column as a DataFrame (necessary for one-hot encoding)
