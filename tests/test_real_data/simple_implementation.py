@@ -83,7 +83,7 @@ def cnn_model(rows, columns, output_dim, n_filters):
     return cnn
 
 
-def evaluate_model(model: MachineLearningModel, x_test, y_test, threshold, *args, **kwargs):
+def evaluate_model(model: MachineLearningModel, x_test, y_test, threshold):
     y_pred = model.predict(x_test)
     y_pred_binary = pd.DataFrame(y_pred).apply(lambda val: (val > threshold).astype(int))
 
@@ -105,6 +105,9 @@ def evaluate_model(model: MachineLearningModel, x_test, y_test, threshold, *args
 # FRAMEWORK IMPLEMENTATION
 
 class BiologyFeatureExtractor(FeatureExtractor):
+    def __init__(self, component_name, managed_data_types: list[str] = None):
+        super().__init__(component_name=component_name, managed_data_types=managed_data_types)
+
     def extract_features(self, x):
         config = tsfel.get_features_by_domain()
         simple_imputer = make_simple_imputer()
@@ -115,6 +118,9 @@ class BiologyFeatureExtractor(FeatureExtractor):
 
 
 class DemographicsFeatureExtractor(FeatureExtractor):
+    def __init__(self, component_name, managed_data_types: list[str] = None):
+        super().__init__(component_name=component_name, managed_data_types=managed_data_types)
+
     def extract_features(self, x):
         one_hot_encoder = OneHotEncoder(drop="if_binary")
         one_hot_encoder.fit(x.loc[:, ["gender"]])  # keep the column as a DataFrame (necessary for one-hot encoding)
@@ -161,4 +167,4 @@ class SimpleCnnModel(MachineLearningModel):
 
 class SimpleEvaluator(Evaluator):
     def evaluate_model(self, model: MachineLearningModel, x_test, y_test, threshold=0.5, *args, **kwargs):
-        return evaluate_model(model, x_test, y_test, threshold, *args, **kwargs)
+        return evaluate_model(model, x_test, y_test, threshold)
