@@ -1,30 +1,33 @@
 import numpy as np
+import pytest
 
 from test_dummy_data.dummy_implementation import DummyFeatureExtractor, DummyAggregator, DummyMachineLearningModel
 
 
-# Feature extractor
-def test_extract_features_initial_call():
-    obj = DummyFeatureExtractor(name="TestFeatureExtractor")
-    result = obj.extract_features(10)
+@pytest.fixture
+def dummy_feature_extractor():
+    return DummyFeatureExtractor(component_name="TestFeatureExtractor")
 
-    assert obj.called == 1
+
+# Feature extractor
+def test_extract_features_initial_call(dummy_feature_extractor):
+    result = dummy_feature_extractor.extract_features(10)
+
+    assert dummy_feature_extractor.called == 1
     assert result == 10
 
 
-def test_extract_features_multiple_calls():
-    obj = DummyFeatureExtractor(name="TestFeatureExtractor")
-
-    result1 = obj.extract_features(20)
-    assert obj.called == 1
+def test_extract_features_multiple_calls(dummy_feature_extractor):
+    result1 = dummy_feature_extractor.extract_features(20)
+    assert dummy_feature_extractor.called == 1
     assert result1 == 20
 
-    result2 = obj.extract_features(30)
-    assert obj.called == 2
+    result2 = dummy_feature_extractor.extract_features(30)
+    assert dummy_feature_extractor.called == 2
     assert result2 == 30
 
-    result3 = obj.extract_features(40)
-    assert obj.called == 3
+    result3 = dummy_feature_extractor.extract_features(40)
+    assert dummy_feature_extractor.called == 3
     assert result3 == 40
 
 

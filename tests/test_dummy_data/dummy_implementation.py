@@ -3,26 +3,26 @@ import numpy as np
 
 
 class DummyFeatureExtractor(FeatureExtractor):
-    def __init__(self, name, managed_data_sources=None):
-        super().__init__(managed_data_sources)
-        self.name = name
+    def __init__(self, component_name, managed_data_types=None):
+        super().__init__(component_name=component_name, managed_data_types=managed_data_types)
         self.called = 0
 
     def extract_features(self, x):
         self.called += 1
-        print(f"extract_features called in {self.name}")
-        print(f"{self.name} was called {self.called} times")
+        print(f"extract_features called in {self.component_name}")
+        print(f"{self.component_name} was called {self.called} times\n")
         return x
 
 
 class DummyAggregator(Aggregator):
     def __init__(self):
+        super().__init__()
         self.called = 0
 
     def aggregate_features(self, features):
         self.called += 1
         print(f"Features aggregated from {len(features)} sources")
-        print(f"aggregator was called {self.called} times")
+        print(f"aggregator was called {self.called} times\n")
         return np.hstack(features)
 
 

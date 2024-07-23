@@ -1,4 +1,3 @@
-import _pickle as pickle
 import os
 import tempfile
 
@@ -7,27 +6,28 @@ import pytest
 from src.mipha.framework import MiphaComponent, MiphaPredictor, DataContract, FeatureExtractor
 
 
+# Save and load tests #############################################
+
 class MockComponent(MiphaComponent):
-    def __init__(self, name):
-        self.name = name
+    def __init__(self, component_name):
+        super().__init__(component_name)
 
 
 class MockFeatureExtractor(FeatureExtractor):
     def extract_features(self, x):
         pass
 
-    def __init__(self, name):
-        super().__init__(name)
-        self.name = name
+    def __init__(self, component_name):
+        super().__init__(component_name)
 
 
-# noinspection PyTypeChecker
+# noinspection PyTypeChecker,PyUnresolvedReferences
 def test_save_and_load():
     # Create mock components
-    feature_extractors = [MockFeatureExtractor(name=f"feature_{i}") for i in range(3)]
-    aggregator = MockComponent(name="aggregator")
-    model = MockComponent(name="model")
-    evaluator = MockComponent(name="evaluator")
+    feature_extractors = [MockFeatureExtractor(component_name=f"feature_{i}") for i in range(3)]
+    aggregator = MockComponent(component_name="aggregator")
+    model = MockComponent(component_name="model")
+    evaluator = MockComponent(component_name="evaluator")
 
     mipha_model = MiphaPredictor(feature_extractors, aggregator, model, evaluator)
 
@@ -43,10 +43,12 @@ def test_save_and_load():
         loaded_model = MiphaPredictor.load(archive_path)
         assert len(loaded_model.feature_extractors) == len(
             mipha_model.feature_extractors), "Feature extractors were not loaded correctly."
-        assert loaded_model.aggregator.name == mipha_model.aggregator.name, "Aggregator was not loaded correctly."
-        assert loaded_model.model.name == mipha_model.model.name, "Model was not loaded correctly."
-        assert loaded_model.evaluator.name == mipha_model.evaluator.name, "Evaluator was not loaded correctly."
+        assert loaded_model.aggregator.component_name == mipha_model.aggregator.component_name, "Aggregator was not loaded correctly."
+        assert loaded_model.model.component_name == mipha_model.model.component_name, "Model was not loaded correctly."
+        assert loaded_model.evaluator.component_name == mipha_model.evaluator.component_name, "Evaluator was not loaded correctly."
 
+
+# DataContract tests #############################################
 
 class ExampleFeatureExtractor(FeatureExtractor):
     def extract_features(self, x):
@@ -107,11 +109,11 @@ def test_get_extractors_nonexistent_data_source(data_contract):
     })
 
     # Test for nonexistent data source type
-    with pytest.raises(KeyError, match="nonexistent_source is not in the contract"):
+    with pytest.raises(KeyError, match="nonexistent_source data source type is not in the contract"):
         data_contract.get_extractors("nonexistent_source")
 
 
-def test_constructor_with_initial_mappings():
+def test_data_contract_constructor_with_initial_mappings():
     initial_mappings = {
         "ExampleDataSourceType": [ExampleFeatureExtractor()],
         "AnotherDataSourceType": [AnotherFeatureExtractor()]
@@ -122,8 +124,8 @@ def test_constructor_with_initial_mappings():
 
 
 def test_from_feature_extractors():
-    extractor1 = ExampleFeatureExtractor(managed_data_sources=["source1", "source2"])
-    extractor2 = AnotherFeatureExtractor(managed_data_sources=["source2"])
+    extractor1 = ExampleFeatureExtractor(managed_data_types=["source1", "source2"])
+    extractor2 = AnotherFeatureExtractor(managed_data_types=["source2"])
 
     extractors = [extractor1, extractor2]
     data_contract = DataContract.from_feature_extractors(extractors)

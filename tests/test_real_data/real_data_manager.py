@@ -104,23 +104,27 @@ def load_stage_5_ckd(random_state=None):
 
     # Create data sources
     data_source_1_train = DataSource(
-        dataType="Creatinine",
+        data_type="Creatinine",
         data=[pd.DataFrame(t["analysis_50912"]) for t in bio_data_train],
+        name="source1_train",
     )
 
     data_source_2_train = DataSource(
-        dataType="Demographics",
+        data_type="Demographics",
         data=pd.DataFrame([get_demographics(t, patients) for t in meta_train]),
+        name="source2_train",
     )
 
     data_source_1_test = DataSource(
-        dataType="Creatinine",
+        data_type="Creatinine",
         data=[pd.DataFrame(t["analysis_50912"]) for t in bio_data_test],
+        name="source1_test",
     )
 
     data_source_2_test = DataSource(
-        dataType="Demographics",
+        data_type="Demographics",
         data=pd.DataFrame([get_demographics(t, patients) for t in meta_test]),
+        name="source2_test",
     )
 
     LearningData = namedtuple(
@@ -134,3 +138,13 @@ def load_stage_5_ckd(random_state=None):
         data_sources_test=[data_source_1_test, data_source_2_test],
         labels_test=labels_test,
     )
+
+
+def save_pickle(obj, filename):
+    with open(filename, 'wb') as f:
+        pickle.dump(obj, f)
+
+
+def load_pickle(filename):
+    with open(filename, 'rb') as f:
+        return pickle.load(f)
