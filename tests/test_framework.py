@@ -1,5 +1,6 @@
 import os
 import tempfile
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -132,3 +133,239 @@ def test_from_feature_extractors():
 
     assert data_contract.get_extractors("source1") == [extractor1]
     assert data_contract.get_extractors("source2") == [extractor1, extractor2]
+
+
+# Data processing tests #############################################
+
+@pytest.fixture
+def feature_extractor_mock():
+    extractor = MagicMock()
+    extractor.component_name = 'extractor_1'
+    extractor.extract_features.return_value = 'features_1'
+    return extractor
+
+
+@pytest.fixture
+def aggregator_mock():
+    aggregator = MagicMock()
+    aggregator.aggregate_features.return_value = 'aggregated_features'
+    return aggregator
+
+
+@pytest.fixture
+def data_source_mock():
+    data_source = MagicMock()
+    data_source.data_type = 'type_1'
+    data_source.name = 'data_source_1'
+    data_source.data = 'data'
+    return data_source
+
+
+@pytest.fixture
+def data_contract_mock(feature_extractor_mock):
+    data_contract = MagicMock()
+    data_contract.get_extractors.return_value = [feature_extractor_mock]
+    return data_contract
+
+
+@pytest.fixture
+def mipha_predictor(feature_extractor_mock, aggregator_mock, data_contract_mock):
+    with patch('src.mipha.framework.DataContract.from_feature_extractors', return_value=data_contract_mock):
+        return MiphaPredictor([feature_extractor_mock, feature_extractor_mock], aggregator_mock, MagicMock(),
+                              MagicMock())
+
+
+def test_process_data_no_precomputed(mipha_predictor, data_source_mock, feature_extractor_mock):
+    data_sources = [data_source_mock]
+    expected_features = 'features_1'
+    expected_last_computed_features = {('data_source_1', 'extractor_1'): expected_features}
+
+    result = mipha_predictor.process_data(data_sources)
+
+    feature_extractor_mock.extract_features.assert_called_once_with(data_source_mock.data)
+    mipha_predictor.aggregator.aggregate_features.assert_called_once_with([expected_features])
+
+    assert mipha_predictor.last_computed_features == expected_last_computed_features
+    assert result == 'aggregated_features'
+
+
+def test_process_data_with_precomputed(mipha_predictor, data_source_mock, feature_extractor_mock):
+    data_sources = [data_source_mock]
+    precomputed_features = {('data_source_1', 'extractor_1'): 'precomputed_features'}
+    expected_last_computed_features = {('data_source_1', 'extractor_1'): 'precomputed_features'}
+
+    result = mipha_predictor.process_data(data_sources, precomputed_features)
+
+    feature_extractor_mock.extract_features.assert_not_called()
+    mipha_predictor.aggregator.aggregate_features.assert_called_once_with(['precomputed_features'])
+
+    assert mipha_predictor.last_computed_features == expected_last_computed_features
+    assert result == 'aggregated_features'
+
+
+def test_process_data_with_partial_precomputed(mipha_predictor, data_source_mock, feature_extractor_mock):
+    data_sources = [data_source_mock]
+    precomputed_features = {('data_source_1', 'extractor_1'): 'precomputed_features'}
+
+    # Mock another extractor
+    feature_extractor_mock_2 = MagicMock()
+    feature_extractor_mock_2.component_name = 'extractor_2'
+    feature_extractor_mock_2.extract_features.return_value = 'features_2'
+
+    mipha_predictor.data_contract.get_extractors.return_value = [feature_extractor_mock, feature_extractor_mock_2]
+
+    result = mipha_predictor.process_data(data_sources, precomputed_features)
+
+    expected_last_computed_features = {
+        ('data_source_1', 'extractor_1'): 'precomputed_features',
+        ('data_source_1', 'extractor_2'): 'features_2'
+    }
+
+    feature_extractor_mock.extract_features.assert_not_called()
+    feature_extractor_mock_2.extract_features.assert_called_once_with(data_source_mock.data)
+    mipha_predictor.aggregator.aggregate_features.assert_called_once_with(['precomputed_features', 'features_2'])
+
+    assert mipha_predictor.last_computed_features == expected_last_computed_features
+    assert result == 'aggregated_features'
+
+
+# Fit and predict tests #############################################
+
+def test_fit_no_precomputed(mipha_predictor, data_source_mock):
+    data_sources = [data_source_mock]
+    train_labels = [1, 0, 1]
+
+    with patch.object(mipha_predictor, 'process_data', return_value='processed_data') as process_data_mock:
+        with patch.object(mipha_predictor.model, 'fit', return_value='model_output') as model_fit_mock:
+            result = mipha_predictor.fit(data_sources, train_labels)
+
+            process_data_mock.assert_called_once_with(data_sources, None)
+            model_fit_mock.assert_called_once_with('processed_data', train_labels)
+
+            assert result == 'model_output'
+
+
+def test_fit_with_precomputed(mipha_predictor, data_source_mock):
+    data_sources = [data_source_mock]
+    train_labels = [1, 0, 1]
+    precomputed_features = {('data_source_1', 'extractor_1'): 'precomputed_features'}
+
+    with patch.object(mipha_predictor, 'process_data', return_value='processed_data') as process_data_mock:
+        with patch.object(mipha_predictor.model, 'fit', return_value='model_output') as model_fit_mock:
+            result = mipha_predictor.fit(data_sources, train_labels, precomputed_features)
+
+            process_data_mock.assert_called_once_with(data_sources, precomputed_features)
+            model_fit_mock.assert_called_once_with('processed_data', train_labels)
+
+            assert result == 'model_output'
+
+
+def test_fit_with_additional_args_kwargs(mipha_predictor, data_source_mock):
+    data_sources = [data_source_mock]
+    train_labels = [1, 0, 1]
+
+    additional_args = ('arg1', 'arg2')
+    additional_kwargs = {'kwarg1': 'value1', 'kwarg2': 'value2'}
+
+    with patch.object(mipha_predictor, 'process_data', return_value='processed_data') as process_data_mock:
+        with patch.object(mipha_predictor.model, 'fit', return_value='model_output') as model_fit_mock:
+            result = mipha_predictor.fit(data_sources, train_labels, None, *additional_args, **additional_kwargs)
+
+            process_data_mock.assert_called_once_with(data_sources, None)
+            model_fit_mock.assert_called_once_with('processed_data', train_labels, *additional_args,
+                                                   **additional_kwargs)
+
+            assert result == 'model_output'
+
+
+def test_predict_no_precomputed(mipha_predictor, data_source_mock):
+    data_sources = [data_source_mock]
+
+    with patch.object(mipha_predictor, 'process_data', return_value='processed_data') as process_data_mock:
+        with patch.object(mipha_predictor.model, 'predict', return_value='prediction_output') as model_predict_mock:
+            result = mipha_predictor.predict(data_sources)
+
+            process_data_mock.assert_called_once_with(data_sources, None)
+            model_predict_mock.assert_called_once_with('processed_data')
+
+            assert result == 'prediction_output'
+
+
+def test_predict_with_precomputed(mipha_predictor, data_source_mock):
+    data_sources = [data_source_mock]
+    precomputed_features = {('data_source_1', 'extractor_1'): 'precomputed_features'}
+
+    with patch.object(mipha_predictor, 'process_data', return_value='processed_data') as process_data_mock:
+        with patch.object(mipha_predictor.model, 'predict', return_value='prediction_output') as model_predict_mock:
+            result = mipha_predictor.predict(data_sources, precomputed_features)
+
+            process_data_mock.assert_called_once_with(data_sources, precomputed_features)
+            model_predict_mock.assert_called_once_with('processed_data')
+
+            assert result == 'prediction_output'
+
+
+def test_predict_with_additional_args_kwargs(mipha_predictor, data_source_mock):
+    data_sources = [data_source_mock]
+
+    additional_args = ('arg1', 'arg2')
+    additional_kwargs = {'kwarg1': 'value1', 'kwarg2': 'value2'}
+
+    with patch.object(mipha_predictor, 'process_data', return_value='processed_data') as process_data_mock:
+        with patch.object(mipha_predictor.model, 'predict', return_value='prediction_output') as model_predict_mock:
+            result = mipha_predictor.predict(data_sources, None, *additional_args, **additional_kwargs)
+
+            process_data_mock.assert_called_once_with(data_sources, None)
+            model_predict_mock.assert_called_once_with('processed_data', *additional_args, **additional_kwargs)
+
+            assert result == 'prediction_output'
+
+
+def test_evaluate_no_precomputed(mipha_predictor, data_source_mock):
+    data_sources = [data_source_mock]
+    test_labels = [1, 0, 1]
+
+    with patch.object(mipha_predictor, 'process_data', return_value='processed_data') as process_data_mock:
+        with patch.object(mipha_predictor.evaluator, 'evaluate_model',
+                          return_value='evaluation_output') as evaluate_model_mock:
+            result = mipha_predictor.evaluate(data_sources, test_labels)
+
+            process_data_mock.assert_called_once_with(data_sources, None)
+            evaluate_model_mock.assert_called_once_with(mipha_predictor.model, 'processed_data', test_labels)
+
+            assert result == 'evaluation_output'
+
+
+def test_evaluate_with_precomputed(mipha_predictor, data_source_mock):
+    data_sources = [data_source_mock]
+    test_labels = [1, 0, 1]
+    precomputed_features = {('data_source_1', 'extractor_1'): 'precomputed_features'}
+
+    with patch.object(mipha_predictor, 'process_data', return_value='processed_data') as process_data_mock:
+        with patch.object(mipha_predictor.evaluator, 'evaluate_model',
+                          return_value='evaluation_output') as evaluate_model_mock:
+            result = mipha_predictor.evaluate(data_sources, test_labels, precomputed_features)
+
+            process_data_mock.assert_called_once_with(data_sources, precomputed_features)
+            evaluate_model_mock.assert_called_once_with(mipha_predictor.model, 'processed_data', test_labels)
+
+            assert result == 'evaluation_output'
+
+
+def test_evaluate_with_additional_args_kwargs(mipha_predictor, data_source_mock):
+    data_sources = [data_source_mock]
+    test_labels = [1, 0, 1]
+
+    additional_args = ('arg1', 'arg2')
+    additional_kwargs = {'kwarg1': 'value1', 'kwarg2': 'value2'}
+
+    with patch.object(mipha_predictor, 'process_data', return_value='processed_data') as process_data_mock:
+        with patch.object(mipha_predictor.evaluator, 'evaluate_model',
+                          return_value='evaluation_output') as evaluate_model_mock:
+            result = mipha_predictor.evaluate(data_sources, test_labels, None, *additional_args, **additional_kwargs)
+
+            process_data_mock.assert_called_once_with(data_sources, None)
+            evaluate_model_mock.assert_called_once_with(mipha_predictor.model, 'processed_data', test_labels,
+                                                        *additional_args, **additional_kwargs)
+
+            assert result == 'evaluation_output'
