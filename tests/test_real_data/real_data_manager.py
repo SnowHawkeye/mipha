@@ -4,7 +4,7 @@ from collections import namedtuple
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-from mipha.framework import DataSource
+from src.mipha.framework import DataSource
 
 DIAGNOSIS_CODE = "icd_code"
 ADMISSION_ID = "hadm_id"

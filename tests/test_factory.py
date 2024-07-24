@@ -1,4 +1,4 @@
-from mipha.factory import make_feature_extractor
+from src.mipha.factory import make_feature_extractor
 
 
 def test_make_feature_extractor():
