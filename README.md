@@ -14,7 +14,7 @@ Development is still in its early stages! Documentation of the library will be u
 
 ## Release summary
 
-### [0.1.0] Initial prototype - 2024-07-25
+### [0.1.1] Initial prototype - 2024-07-25
 
 #### Summary
 
@@ -29,4 +29,6 @@ This very first development allows for the instantiation of a disease prediction
 - Set up continuous integration tools
 
 [//]: # (#### Changed)
-[//]: # (#### Fixed)
+#### Fixed
+
+- Bumped up version number for proper release on PyPi
