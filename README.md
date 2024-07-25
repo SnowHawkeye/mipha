@@ -14,7 +14,7 @@ Development is still in its early stages! Documentation of the library will be u
 
 ## Release summary
 
-### [0.1.0] Initial prototype - 2024-07-24
+### [0.1.0] Initial prototype - 2024-07-25
 
 #### Summary
 
