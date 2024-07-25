@@ -1,6 +1,6 @@
 # Inspired from https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
 
-name: Code Quality Checks
+name: Run code quality checks and build package
 
 on:
   workflow_call:
@@ -46,3 +46,15 @@ jobs:
           pip install ruff
           ruff check --output-format=github .
         continue-on-error: true
+
+      - name: Build package
+        run: |
+          pip install build
+          python -m build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mipha-build
+          path: dist/
+          retention-days: 7
