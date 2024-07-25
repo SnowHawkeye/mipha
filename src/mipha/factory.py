@@ -1,6 +1,6 @@
 from typing import Callable, Type
 
-from mipha.framework import FeatureExtractor, Aggregator
+from src.mipha.framework import FeatureExtractor, Aggregator
 
 
 def make_feature_extractor(extract_features: Callable) -> Type[FeatureExtractor]:

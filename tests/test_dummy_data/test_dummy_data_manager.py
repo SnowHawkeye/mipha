@@ -1,6 +1,6 @@
 import numpy as np
 
-from test_dummy_data.dummy_data_manager import load_dummy_data
+from tests.test_dummy_data.dummy_data_manager import load_dummy_data
 
 
 def test_load_dummy_data():

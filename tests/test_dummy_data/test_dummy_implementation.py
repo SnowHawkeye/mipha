@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from test_dummy_data.dummy_implementation import DummyFeatureExtractor, DummyAggregator, DummyMachineLearningModel
+from tests.test_dummy_data.dummy_implementation import DummyFeatureExtractor, DummyAggregator, DummyMachineLearningModel
 
 
 @pytest.fixture

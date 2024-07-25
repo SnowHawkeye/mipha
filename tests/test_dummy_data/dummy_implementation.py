@@ -1,5 +1,6 @@
-from src.mipha.framework import *
 import numpy as np
+
+from src.mipha.framework import FeatureExtractor, Aggregator, MachineLearningModel, Evaluator
 
 
 class DummyFeatureExtractor(FeatureExtractor):

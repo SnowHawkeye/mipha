@@ -11,7 +11,7 @@ from sklearn.metrics import roc_auc_score, classification_report, confusion_matr
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from tqdm.notebook import tqdm
 
-from src.mipha.framework import *
+from src.mipha.framework import MachineLearningModel, FeatureExtractor, Aggregator, Evaluator
 
 
 # UTILITY FUNCTIONS
