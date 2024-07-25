@@ -28,6 +28,5 @@ This very first development allows for the instantiation of a disease prediction
 - Introduce unit tests and test utilities
 - Set up continuous integration tools
 
-#### Changed
-
-#### Fixed
+[//]: # (#### Changed)
+[//]: # (#### Fixed)
